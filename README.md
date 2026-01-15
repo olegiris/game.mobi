@@ -31,4 +31,11 @@
 pip3 install buildozer
 
 # Сборка APK
+
 buildozer android debug
+
+## 📲 Скачать APK
+
+![QR Code](https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=https://github.com/ваш-username/catchball-android/releases/latest/download/app-release.apk)
+
+[Последняя версия APK](https://github.com/ваш-username/catchball-android/releases/latest/download/app-release.apk)
