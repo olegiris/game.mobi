@@ -1,10 +1,10 @@
 [app]
 
 # Название приложения
-title = Ловец Яиц
+title = Catch the Egg
 
 # Имя пакета
-package.name = com.stk.catchball
+package.name = catchball
 
 # Домен
 package.domain = com.stk
@@ -68,4 +68,5 @@ android.release_artifact = bin/CatchBall-{version}-release-unsigned.apk
 
 # Путь к бинарным файлам
 log_level = 2
+
 warn_on_root = 1
