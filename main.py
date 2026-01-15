@@ -2,7 +2,7 @@
 Главный файл игры "Catch the Ball"
 Улучшенная версия с модульной архитектурой
 """
-import pygame
+import Kivy
 import sys
 import config
 from database import Database
@@ -216,4 +216,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
