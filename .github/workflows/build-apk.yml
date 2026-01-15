@@ -25,13 +25,16 @@ jobs:
         sudo apt-get install -y \
           git zip unzip openjdk-11-jdk \
           autoconf libtool pkg-config zlib1g-dev \
-          libncurses5-dev libncursesw5-dev libtinfo5 cmake \
-          libffi-dev libssl-dev ninja-build
+          libncurses5-dev libncursesw5-dev \
+          libtinfo6 \  # ИЗМЕНЕНО: libtinfo5 -> libtinfo6
+          cmake \
+          libffi-dev libssl-dev ninja-build \
+          python3-pip python3-setuptools
 
     - name: Install Buildozer
       run: |
-        pip3 install --upgrade pip wheel setuptools virtualenv
-        pip3 install buildozer cython==0.29.33
+        python3 -m pip install --upgrade pip wheel setuptools virtualenv
+        python3 -m pip install buildozer cython==0.29.33
 
     - name: Configure Buildozer
       run: |
@@ -39,23 +42,72 @@ jobs:
         if [ ! -f buildozer.spec ]; then
           buildozer init
         fi
-        # Исправляем главный файл
-        sed -i "s|^source.main = .*$|source.main = main.py|" buildozer.spec
-        # Упрощаем требования (убираем pygame для первой сборки)
-        sed -i "s|^requirements = .*$|requirements = python3,kivy==2.1.0|" buildozer.spec
-        # Устанавливаем минимальный API
-        sed -i "s|^android.minapi = .*$|android.minapi = 21|" buildozer.spec
+        
+        echo "=== Проверяем и исправляем buildozer.spec ==="
+        
+        # Создаем минимальный рабочий конфиг, если нужно
+        cat > buildozer_minimal.spec << 'EOF'
+[app]
+title = Catch the Egg
+package.name = catchball
+package.domain = com.stk
+source.dir = .
+source.main = main.py
+version = 1.0
+requirements = python3,kivy==2.1.0
+android.api = 31
+android.minapi = 21
+orientation = portrait
+fullscreen = 1
+EOF
+        
+        # Объединяем конфиги, если существующий слишком сложный
+        if [ -f buildozer.spec ] && grep -q "\[app\]" buildozer.spec; then
+          echo "Используем существующий buildozer.spec с исправлениями..."
+          # Исправляем главный файл
+          sed -i "s|^source.main = .*\$|source.main = main.py|" buildozer.spec
+          # Упрощаем требования
+          sed -i "s|^requirements = .*\$|requirements = python3,kivy==2.1.0|" buildozer.spec
+          # Устанавливаем минимальный API
+          sed -i "s|^android.minapi = .*\$|android.minapi = 21|" buildozer.spec
+        else
+          echo "Заменяем на минимальный конфиг..."
+          cp buildozer_minimal.spec buildozer.spec
+        fi
+        
+        echo "=== Итоговый buildozer.spec ==="
+        cat buildozer.spec
 
     - name: Build with Buildozer
       run: |
-        # Запускаем сборку (yes для ответов на все вопросы)
-        yes | buildozer android debug 2>&1 | tee build.log
-        echo "Build completed with exit code: $?"
+        echo "Начинаем сборку APK..."
+        # Сначала очистим предыдущие сборки
+        rm -rf .buildozer 2>/dev/null || true
+        
+        # Запускаем сборку с подробным выводом
+        timeout 1200 buildozer android debug 2>&1 | tail -150
+
+    - name: Check APK file
+      if: success()
+      run: |
+        echo "=== Проверяем наличие APK ==="
+        if find . -name "*.apk" -type f | grep -q .; then
+          echo "✅ APK найден:"
+          find . -name "*.apk" -type f -exec ls -la {} \;
+          echo "Копируем APK в bin/"
+          mkdir -p bin
+          find . -name "*.apk" -type f -exec cp {} bin/ \;
+        else
+          echo "❌ APK не создан"
+          echo "Содержимое .buildozer:"
+          ls -la .buildozer/ 2>/dev/null || echo "Папка .buildozer не существует"
+        fi
 
     - name: Upload APK
-      if: success()  # ПРОСТАЯ ПРОВЕРКА - только если предыдущие шаги успешны
+      if: success()
       uses: actions/upload-artifact@v4
       with:
         name: app-debug-apk
         path: bin/*.apk
         retention-days: 7
+        if-no-files-found: warn
