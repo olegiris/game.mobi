@@ -53,8 +53,8 @@ jobs:
         echo "Build completed with exit code: $?"
 
     - name: Upload APK
-      if: success() && hash glob('bin/*.apk') 2>/dev/null
-      uses: actions/upload-artifact@v4  # <-- КЛЮЧЕВОЕ ИЗМЕНЕНИЕ!
+      if: success()  # ПРОСТАЯ ПРОВЕРКА - только если предыдущие шаги успешны
+      uses: actions/upload-artifact@v4
       with:
         name: app-debug-apk
         path: bin/*.apk
